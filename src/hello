@@ -1,14 +1,15 @@
 print("Hello, world!")
 
-def third_func(test=True):
+def third_func(name, test=True):
     if test:
-        print("True!")
+        print(name + " is True!")
     else:
-        print("False!")
+        print(name + " is False!")
 
-print(third_func())
+name = 'mollie'
+print(third_func(name))
 test=False
-print(third_func(test))
+print(third_func(name,test))
 
 
 
