@@ -1,2 +1,14 @@
 print("Hello, world!")
 
+def third_func(test=True):
+    if test:
+        print("True!")
+    else:
+        print("False!")
+
+print(third_func())
+test=False
+print(third_func(test))
+
+
+
