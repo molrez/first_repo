@@ -15,15 +15,16 @@ from utils import blaze_path
 from utils import get_web_file
 from bs4 import BeautifulSoup
 
+
+import requests
 import os
 
 
-def semantic_output(file_name, table, semantic):
+def semantic_printer(file_name, table, semantic):
     if semantic == "word_count":
         with open(file_name, 'w') as f:
             for word, count in table:
-                f.write("{\"text\":\"%s\",\"count\":%s}," % (word, count))
-
+                f.write("{\"text\":\"%s\",\"count\":%s}\n" % (word, count))
 
 
 def count_words(word_list):
@@ -40,10 +41,9 @@ def count_words(word_list):
     return sorted(word_dict.items(), key=lambda item: item[1], reverse=True)
 
 
-
-def get_words(file_name):
+def get_words(file_path):
     word_list = list()
-    with open(file_name, 'r') as f:
+    with open(file_path, 'r') as f:
         raw_text = f.read()
         text = str.lower(raw_text)
         for ch in '\'`!"#$%&()*+,-./:;<=>?@[\\]^_{|}~0123456789\t\n':
@@ -53,25 +53,50 @@ def get_words(file_name):
     return word_list
 
 
-def semantics(file_name, play):
-    word_list = get_words(file_name)
-    word_count = count_words(word_list)
-    log_file = "c:/shakespeare/" + play + "_logfile.txt"
-    semantic = "word_count"
-    semantic_output(log_file, word_count, semantic)
+def semantics(corpus):
+    log_list = list()
+    for document in corpus:
+        path, name = os.path.split(document)
+        word_list = get_words(document)
+        word_count = count_words(word_list)
+        log_file = path + "/logfile_" + name
+        log_list.append(log_file)
+        semantic = "word_count"
+        semantic_printer(log_file, word_count, semantic)
+
+    return log_list
+
+
+def parser(corpus, path):
+    parse_yield = list()
+    for line in corpus:
+        print(line)
+        (document, title, resource,) = line
+        doc = requests.get(document)
+        soup = BeautifulSoup(doc.content, 'html.parser')
+        plain_text = soup.get_text()
+        file_name = title + "_" + resource + "_plain.txt"
+        page = (file_name, plain_text,)
+        output_file_name = prep_file(path, page)
+        parse_yield.append(output_file_name)
+
+    return parse_yield
 
 
 def crawler(plays, path, root_url):
+    crawl_yield = list()
     for play in plays:
         print(play)
-        file_name = "full.html"
+        resource = "full"
         play_root = root_url + "/" + play
-        url_full_play = play_root + "/" + file_name
+        url_full_play = play_root + "/" + resource + ".html"
         if check_url(url_full_play):
             destination_path = os.path.join(path, play)
             blaze_path(destination_path)
             file_name = play + ".html"
             destination = os.path.join(destination_path, file_name)
+            list_entry = (url_full_play, play, resource,)
+            crawl_yield.append(list_entry)
             get_web_file(url_full_play, destination)
 
             more_acts = True
@@ -87,14 +112,17 @@ def crawler(plays, path, root_url):
                         act_str = str(act)
                         scene_str = str(scene)
                         print(act_str + ", " + scene_str)
-                        scene_file_name = play + "." + act_str + "." \
-                                          + scene_str + ".html"
+                        resource = play + "." + act_str + "." \
+                                          + scene_str
+                        scene_file_name = resource + ".html"
                         scene_url = play_root + "/" + scene_file_name
                         if check_url(scene_url):
                             act_path = os.path.join(destination_path, act_str)
                             blaze_path(act_path)
                             destination = os.path.join(act_path, scene_file_name)
                             get_web_file(scene_url, destination)
+                            list_entry = (scene_url, play, resource,)
+                            crawl_yield.append(list_entry)
                             scene += stride
                         elif not check_url and scene == 1:
                             more_acts = False
@@ -110,6 +138,8 @@ def crawler(plays, path, root_url):
 
         else:
             print(url_full_play + " not found!")
+
+    return crawl_yield
 
 
 def main():
@@ -127,14 +157,10 @@ def main():
 
     root_url = "http://shakespeare.mit.edu"
 
-    crawler(plays, path, root_url)
-
-    for play in plays:
-        print(play)
-        source = 'c:/shakespeare/' + play + "/" + play + ".html"
-        semantics(source, play)
-
-
+    raw_corpus = crawler(plays, path, root_url)
+    corpus = parser(raw_corpus, path)
+    semantic_output = semantics(corpus)
+    print(semantic_output)
 
 # ----------------------------------------------------------------------#
 

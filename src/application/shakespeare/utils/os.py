@@ -79,7 +79,7 @@ def prep_file(path, page, action='create'):
     elif action == 'append':
         append_file(file_path, content)
 
-    return file_name
+    return file_path
 
 
 #-----------------------------------------------------------------------------------------------------#
