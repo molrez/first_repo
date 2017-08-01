@@ -17,8 +17,8 @@ def main():
         str_counter = str(counter)
         url = root_url + str_counter
         f = requests.get(url)
-        soup = BeautifulSoup(f)
-        genre_title = soup.find( "span", { 'class' : 'genreTitle' } ).text
+        soup = BeautifulSoup(f.content, 'html.parser')
+        genre_title = soup.find( "span", { 'class' : 'genreTitle' } )
         print( str_counter, genre_title, url )
         counter +=1
 
